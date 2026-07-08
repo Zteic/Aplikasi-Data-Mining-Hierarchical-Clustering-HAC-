@@ -2,40 +2,46 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.cluster.hierarchy as sch
+import plotly.express as px  # <-- Library baru untuk grafik interaktif
 from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics import silhouette_score  # <-- Import baru untuk Evaluasi Model
+from sklearn.metrics import silhouette_score
 
-# 1. Judul Aplikasi
-st.title("Aplikasi Data Mining: Hierarchical Clustering (HAC)")
-st.write("Aplikasi ini digunakan untuk memetakan karakteristik wilayah atau objek berdasarkan kemiripannya.")
+# --- KONFIGURASI HALAMAN ---
+# Membuat tampilan web otomatis melebar (wide) agar terlihat seperti dashboard sungguhan
+st.set_page_config(page_title="Dashboard Klasifikasi HAC", page_icon="📊", layout="wide")
 
-# Data Sampel Bawaan
-data_sampel = {
-    'Provinsi': ['Aceh', 'Sumut', 'Sumbar', 'Riau', 'Jambi', 'Jakarta', 'Jabar', 'Jateng', 'DIY', 'Jatim'],
-    'Tingkat_Kemiskinan': [14.64, 8.15, 6.04, 6.68, 7.58, 4.44, 7.62, 10.77, 11.49, 10.14],
-    'Tingkat_Pengangguran': [5.75, 5.47, 5.94, 4.23, 4.70, 7.57, 7.44, 5.13, 3.69, 4.88]
-}
-df_default = pd.DataFrame(data_sampel)
+st.title("📊 Dashboard Data Mining: Hierarchical Clustering (HAC)")
+st.write("Aplikasi cerdas untuk memetakan dan mengelompokkan karakteristik objek secara otomatis.")
 
-# 2. Pilihan Sumber Data di Sidebar
-st.sidebar.header("Pilihan Sumber Data")
+# --- FITUR CACHE (OPTIMASI KECEPATAN) ---
+@st.cache_data
+def load_default_data():
+    data_sampel = {
+        'Provinsi': ['Aceh', 'Sumut', 'Sumbar', 'Riau', 'Jambi', 'Jakarta', 'Jabar', 'Jateng', 'DIY', 'Jatim'],
+        'Tingkat_Kemiskinan': [14.64, 8.15, 6.04, 6.68, 7.58, 4.44, 7.62, 10.77, 11.49, 10.14],
+        'Tingkat_Pengangguran': [5.75, 5.47, 5.94, 4.23, 4.70, 7.57, 7.44, 5.13, 3.69, 4.88]
+    }
+    return pd.DataFrame(data_sampel)
+
+df_default = load_default_data()
+
+# --- SIDEBAR & INPUT DATA ---
+st.sidebar.header("📁 Pengaturan Data")
 sumber_data = st.sidebar.radio(
-    "Pilih Cara Memasukkan Data:", 
-    ("1. Gunakan Data Sampel (Demo Instan)", 
-     "2. Input Data Manual (Ketik Langsung)", 
-     "3. Unggah File CSV")
+    "Pilih Sumber Data:", 
+    ("1. Data Sampel (Demo)", "2. Input Manual", "3. Upload CSV")
 )
 
 df = None
 
-# Logika berdasarkan pilihan sumber data
-if sumber_data == "1. Gunakan Data Sampel (Demo Instan)":
+if sumber_data == "1. Data Sampel (Demo)":
     df = df_default.copy()
-    st.write("### Preview Data Sampel:")
-    st.dataframe(df, use_container_width=True)
+    with st.expander("👀 Lihat Data Sampel"):
+        st.dataframe(df, use_container_width=True)
 
-elif sumber_data == "2. Input Data Manual (Ketik Langsung)":
+elif sumber_data == "2. Input Manual":
     st.write("### Input Data Manual")
+    # Memunculkan kembali petunjuk pengisian tabel manual yang lengkap
     st.info("💡 **Petunjuk Pengisian:**\n- **Edit Data:** Klik dua kali pada sel tabel di bawah untuk mengetik/mengubah angka.\n- **Tambah Baris:** Arahkan kursor atau scroll ke baris paling bawah, baris kosong akan otomatis muncul.\n- **Hapus Baris:** Klik kotak kecil di sebelah kiri baris, lalu tekan tombol `Delete` atau `Backspace` di keyboard.")
     
     template_data = pd.DataFrame({
@@ -43,26 +49,27 @@ elif sumber_data == "2. Input Data Manual (Ketik Langsung)":
         'Fitur_1': [10.5, 12.0, 8.5, 15.0, 9.0],
         'Fitur_2': [2.1, 2.5, 1.8, 3.0, 2.0]
     })
-    
     df = st.data_editor(template_data, num_rows="dynamic", use_container_width=True)
 
-elif sumber_data == "3. Unggah File CSV":
-    uploaded_file = st.file_uploader("Pilih file CSV data Anda", type=["csv"])
+elif sumber_data == "3. Upload CSV":
+    uploaded_file = st.file_uploader("Unggah file CSV Anda", type=["csv"])
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
-        st.write("### Preview Data CSV:")
-        st.dataframe(df, use_container_width=True)
+        with st.expander("👀 Lihat Data CSV"):
+            st.dataframe(df, use_container_width=True)
     else:
-        st.info("Silakan unggah file CSV Anda.")
+        st.warning("Silakan unggah file CSV untuk memulai.")
         st.stop()
 
-# Memastikan df tidak kosong
+# --- PROSES ALGORITMA ---
 if df is not None and not df.empty:
     kolom_numerik = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
 
     if len(kolom_numerik) >= 2:
-        st.sidebar.header("Pengaturan Algoritma HAC")
+        st.sidebar.markdown("---")
+        st.sidebar.header("⚙️ Pengaturan HAC")
         
+        # Memunculkan kembali menu panduan parameter algoritma di sidebar
         with st.sidebar.expander("ℹ️ Panduan Pengaturan (Klik di sini)"):
             st.markdown("""
             **1. Fitur X & Y:** Pilih dua kolom angka yang akan dianalisis. Fitur X untuk sumbu datar, Fitur Y untuk sumbu tegak pada grafik.
@@ -74,78 +81,82 @@ if df is not None and not df.empty:
             
             **3. Jumlah Klaster (K):** Mau dibagi jadi berapa kelompok? (Misal: Pilih 3 jika ingin membagi data menjadi kategori Tinggi, Sedang, Rendah).
             """)
-
-        x_axis = st.sidebar.selectbox("Pilih Fitur X (Horizontal)", kolom_numerik, index=0)
-        y_axis = st.sidebar.selectbox("Pilih Fitur Y (Vertikal)", kolom_numerik, index=1 if len(kolom_numerik) > 1 else 0)
+        
+        x_axis = st.sidebar.selectbox("Pilih Sumbu X", kolom_numerik, index=0)
+        y_axis = st.sidebar.selectbox("Pilih Sumbu Y", kolom_numerik, index=1 if len(kolom_numerik) > 1 else 0)
         
         linkage_method = st.sidebar.selectbox("Metode Linkage", ["ward", "complete", "average", "single"])
-        k_value = st.sidebar.slider("Tentukan jumlah Klaster (K)", min_value=2, max_value=5, value=3)
+        k_value = st.sidebar.slider("Jumlah Klaster (K)", min_value=2, max_value=5, value=3)
 
-        if st.button("Jalankan Hierarchical Clustering (HAC)"):
+        if st.sidebar.button("🚀 Jalankan Klasterisasi"):
             X = df[[x_axis, y_axis]]
             
-            # --- 1. DENDROGRAM ---
-            st.write("---")
-            st.write("### 1. Visualisasi Dendrogram (Pohon Hierarki)")
-            fig_dendro, ax_dendro = plt.subplots(figsize=(10, 5))
-            
-            label_kolom = df.iloc[:, 0].astype(str).values if df.shape[1] > 0 else None
-            
-            linkage_matrix = sch.linkage(X, method=linkage_method)
-            sch.dendrogram(linkage_matrix, labels=label_kolom, ax=ax_dendro, leaf_rotation=45)
-            plt.title("Dendrogram HAC")
-            plt.ylabel("Jarak Euclidean")
-            st.pyplot(fig_dendro)
-            
-            # --- 2. HASIL TABEL ---
+            # Memproses Model HAC
             hac = AgglomerativeClustering(n_clusters=k_value, metric='euclidean', linkage=linkage_method)
-            df['Cluster'] = hac.fit_predict(X)
+            # Menjadikan tipe data string agar Plotly menganggapnya sebagai kategori (bukan gradasi angka)
+            df['Cluster'] = hac.fit_predict(X).astype(str)
             
-            st.write("---")
-            st.write(f"### 2. Hasil Pengelompokan Data ({k_value} Klaster):")
-            st.dataframe(df, use_container_width=True)
+            # --- TAMPILAN TABS (UI/UX MODERN) ---
+            st.markdown("### 📈 Hasil Analisis Klasterisasi")
+            tab1, tab2, tab3 = st.tabs(["🌳 Dendrogram", "🎯 Scatter Plot (Interaktif)", "📝 Tabel & Profiling"])
             
-            # --- 3. SCATTER PLOT ---
-            st.write("---")
-            st.write("### 3. Visualisasi Scatter Plot")
-            fig_scatter, ax_scatter = plt.subplots()
-            ax_scatter.scatter(df[x_axis], df[y_axis], c=df['Cluster'], cmap='rainbow', edgecolors='k', s=100)
+            # TAB 1: DENDROGRAM
+            with tab1:
+                st.caption("Pohon hierarki ini menunjukkan proses penggabungan data berdasarkan kedekatan jarak.")
+                fig_dendro, ax_dendro = plt.subplots(figsize=(10, 4))
+                label_kolom = df.iloc[:, 0].astype(str).values if df.shape[1] > 0 else None
+                linkage_matrix = sch.linkage(X, method=linkage_method)
+                sch.dendrogram(linkage_matrix, labels=label_kolom, ax=ax_dendro, leaf_rotation=45)
+                plt.ylabel("Jarak Euclidean")
+                st.pyplot(fig_dendro)
             
-            if df.shape[1] > 0:
-                for i, txt in enumerate(df.iloc[:, 0]):
-                    ax_scatter.annotate(str(txt), (df[x_axis].iloc[i], df[y_axis].iloc[i]), fontsize=9, alpha=0.8)
-                    
-            ax_scatter.set_xlabel(x_axis)
-            ax_scatter.set_ylabel(y_axis)
-            plt.title("Persebaran Klaster")
-            st.pyplot(fig_scatter)
+            # TAB 2: SCATTER PLOT INTERAKTIF DENGAN PLOTLY
+            with tab2:
+                st.caption("Arahkan kursor ke titik-titik di bawah ini untuk melihat detail objek.")
+                nama_objek = df.columns[0] 
+                fig_scatter = px.scatter(
+                    df, 
+                    x=x_axis, 
+                    y=y_axis, 
+                    color="Cluster",
+                    hover_name=nama_objek,
+                    title=f"Persebaran {k_value} Klaster",
+                    color_discrete_sequence=px.colors.qualitative.Set1
+                )
+                fig_scatter.update_traces(marker=dict(size=14, line=dict(width=1, color='DarkSlateGrey')))
+                st.plotly_chart(fig_scatter, use_container_width=True)
+            
+            # TAB 3: TABEL, EVALUASI & DOWNLOAD
+            with tab3:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write("**Hasil Evaluasi Model**")
+                    if k_value > 1 and k_value < len(X):
+                        score = silhouette_score(X, df['Cluster'], metric='euclidean')
+                        st.success(f"Silhouette Score: **{score:.3f}**")
+                        st.caption("*(Nilai mendekati 1 menandakan pemisahan klaster sangat baik)*")
+                
+                with col2:
+                    st.write("**Unduh Laporan**")
+                    csv_export = df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📥 Download Hasil (CSV)",
+                        data=csv_export,
+                        file_name="hasil_klaster_hac.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
 
-            # ================= FITUR BARU =================
-            
-            # --- 4. EVALUASI MODEL (SILHOUETTE SCORE) ---
-            st.write("---")
-            st.write("### 4. Evaluasi Kualitas Klaster")
-            if k_value > 1 and k_value < len(X):
-                score = silhouette_score(X, df['Cluster'], metric='euclidean')
-                st.success(f"**Nilai Silhouette Score: {score:.3f}**")
-                st.caption("💡 *Info: Nilai berkisar antara -1 hingga 1. Semakin mendekati angka 1, berarti pengelompokan data semakin akurat dan terpisah dengan baik.*")
+                st.write("---")
+                st.write("**Ringkasan Karakteristik (Rata-rata per Klaster)**")
+                df['Cluster_Int'] = df['Cluster'].astype(int)
+                profiling = df.groupby('Cluster_Int')[[x_axis, y_axis]].mean().reset_index()
+                profiling.rename(columns={'Cluster_Int': 'Cluster'}, inplace=True)
+                st.dataframe(profiling, use_container_width=True)
+                
+                st.write("**Tabel Data Lengkap**")
+                st.dataframe(df.drop(columns=['Cluster_Int']), use_container_width=True)
 
-            # --- 5. PROFILING KLASTER ---
-            st.write("---")
-            st.write("### 5. Ringkasan Karakteristik (Profiling)")
-            st.write("Tabel ini menunjukkan **nilai rata-rata** dari tiap fitur untuk masing-masing kelompok, sehingga kita tahu ciri khas dari tiap klaster.")
-            profiling = df.groupby('Cluster')[[x_axis, y_axis]].mean().reset_index()
-            st.dataframe(profiling, use_container_width=True)
-
-            # --- 6. TOMBOL UNDUH CSV ---
-            st.write("---")
-            csv_export = df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Unduh Hasil Klasterisasi (Format CSV)",
-                data=csv_export,
-                file_name="hasil_klaster_hac.csv",
-                mime="text/csv",
-            )
-            
     else:
         st.error("Data yang diinputkan harus memiliki minimal 2 kolom yang berisi angka!")
