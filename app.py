@@ -98,19 +98,18 @@ if df is not None and not df.empty:
             st.markdown("### 📈 Hasil Analisis Klasterisasi")
             tab1, tab2, tab3 = st.tabs(["🌳 Dendrogram", "🎯 Scatter Plot (Interaktif)", "📝 Tabel & Profiling"])
             
-            # TAB 1: DENDROGRAM (Disesuaikan aspek rasionya agar tidak gepeng di HP)
+            # TAB 1: DENDROGRAM
             with tab1:
                 st.caption("Pohon hierarki menunjukkan proses penggabungan data.")
-                # Menggunakan ukuran figsize yang lebih persegi (8, 5) agar proporsional di layar HP
                 fig_dendro, ax_dendro = plt.subplots(figsize=(8, 5))
                 label_kolom = df.iloc[:, 0].astype(str).values if df.shape[1] > 0 else None
                 linkage_matrix = sch.linkage(X, method=linkage_method)
                 sch.dendrogram(linkage_matrix, labels=label_kolom, ax=ax_dendro, leaf_rotation=90)
                 plt.ylabel("Jarak Euclidean")
-                plt.tight_layout()  # Memastikan teks tidak terpotong
+                plt.tight_layout()
                 st.pyplot(fig_dendro)
             
-            # TAB 2: SCATTER PLOT INTERAKTIF DENGAN PLOTLY
+            # TAB 2: SCATTER PLOT INTERAKTIF
             with tab2:
                 st.caption("Arahkan kursor atau ketuk titik untuk melihat detail objek.")
                 nama_objek = df.columns[0] 
@@ -124,18 +123,15 @@ if df is not None and not df.empty:
                     color_discrete_sequence=px.colors.qualitative.Set1
                 )
                 fig_scatter.update_traces(marker=dict(size=14, line=dict(width=1, color='DarkSlateGrey')))
-                
-                # Mengatur height agar otomatis persegi dan responsif di mobile
                 fig_scatter.update_layout(
                     autosize=True,
-                    height=500,  # Membatasi tinggi agar tidak memanjang vertikal di HP
+                    height=500,
                     margin=dict(l=40, r=40, b=40, t=40)
                 )
                 st.plotly_chart(fig_scatter, use_container_width=True)
             
             # TAB 3: TABEL, EVALUASI & DOWNLOAD
             with tab3:
-                # Menggunakan kolom responsif (di desktop bersebelahan, di HP otomatis menumpuk vertikal)
                 col1, col2 = st.columns([1, 1])
                 
                 with col1:
@@ -143,65 +139,6 @@ if df is not None and not df.empty:
                     if k_value > 1 and k_value < len(X):
                         score = silhouette_score(X, df['Cluster'], metric='euclidean')
                         st.success(f"Silhouette Score: **{score:.3f}**")
-                
-                with col2:
-                    st.write("**Unduh Laporan**")
-                    csv_export = df.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📥 Download Hasil (CSV)",
-                        data=csv_export,
-                        file_name="hasil_klaster_hac.csv",
-                        mime="text/csv",
-                        use_container_width=True
-                    )
-
-                st.write("---")
-                st.write("**Ringkasan Karakteristik (Rata-rata per Klaster)**")
-                df['Cluster_Int'] = df['Cluster'].astype(int)
-                profiling = df.groupby('Cluster_Int')[[x_axis, y_axis]].mean().reset_index()
-                profiling.rename(columns={'Cluster_Int': 'Cluster'}, inplace=True)
-                st.dataframe(profiling, use_container_width=True)
-                
-                st.write("**Tabel Data Lengkap**")
-                st.dataframe(df.drop(columns=['Cluster_Int']), use_container_width=True)
-
-    else:
-        st.error("Data yang diinputkan harus memiliki minimal 2 kolom yang berisi angka!")
-            with tab1:
-                st.caption("Pohon hierarki ini menunjukkan proses penggabungan data berdasarkan kedekatan jarak.")
-                fig_dendro, ax_dendro = plt.subplots(figsize=(10, 4))
-                label_kolom = df.iloc[:, 0].astype(str).values if df.shape[1] > 0 else None
-                linkage_matrix = sch.linkage(X, method=linkage_method)
-                sch.dendrogram(linkage_matrix, labels=label_kolom, ax=ax_dendro, leaf_rotation=45)
-                plt.ylabel("Jarak Euclidean")
-                st.pyplot(fig_dendro)
-            
-            # TAB 2: SCATTER PLOT INTERAKTIF DENGAN PLOTLY
-            with tab2:
-                st.caption("Arahkan kursor ke titik-titik di bawah ini untuk melihat detail objek.")
-                nama_objek = df.columns[0] 
-                fig_scatter = px.scatter(
-                    df, 
-                    x=x_axis, 
-                    y=y_axis, 
-                    color="Cluster",
-                    hover_name=nama_objek,
-                    title=f"Persebaran {k_value} Klaster",
-                    color_discrete_sequence=px.colors.qualitative.Set1
-                )
-                fig_scatter.update_traces(marker=dict(size=14, line=dict(width=1, color='DarkSlateGrey')))
-                st.plotly_chart(fig_scatter, use_container_width=True)
-            
-            # TAB 3: TABEL, EVALUASI & DOWNLOAD
-            with tab3:
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.write("**Hasil Evaluasi Model**")
-                    if k_value > 1 and k_value < len(X):
-                        score = silhouette_score(X, df['Cluster'], metric='euclidean')
-                        st.success(f"Silhouette Score: **{score:.3f}**")
-                        st.caption("*(Nilai mendekati 1 menandakan pemisahan klaster sangat baik)*")
                 
                 with col2:
                     st.write("**Unduh Laporan**")
