@@ -2,13 +2,21 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.cluster.hierarchy as sch
-import plotly.express as px  # <-- Library baru untuk grafik interaktif
+import plotly.express as px
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 
 # --- KONFIGURASI HALAMAN ---
-# Membuat tampilan web otomatis melebar (wide) agar terlihat seperti dashboard sungguhan
 st.set_page_config(page_title="Dashboard Klasifikasi HAC", page_icon="📊", layout="wide")
+
+# Menambahkan CSS custom agar tabel di HP bisa di-scroll horizontal dengan mulus
+st.markdown("""
+    <style>
+    div[data-testid="stDataFrame"] > div {
+        overflow-x: auto !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("📊 Dashboard Data Mining: Hierarchical Clustering (HAC)")
 st.write("Aplikasi cerdas untuk memetakan dan mengelompokkan karakteristik objek secara otomatis.")
@@ -41,9 +49,7 @@ if sumber_data == "1. Data Sampel (Demo)":
 
 elif sumber_data == "2. Input Manual":
     st.write("### Input Data Manual")
-    # Memunculkan kembali petunjuk pengisian tabel manual yang lengkap
-    st.info("💡 **Petunjuk Pengisian:**\n- **Edit Data:** Klik dua kali pada sel tabel di bawah untuk mengetik/mengubah angka.\n- **Tambah Baris:** Arahkan kursor atau scroll ke baris paling bawah, baris kosong akan otomatis muncul.\n- **Hapus Baris:** Klik kotak kecil di sebelah kiri baris, lalu tekan tombol `Delete` atau `Backspace` di keyboard.")
-    
+    st.info("💡 **Petunjuk:** Klik ganda pada sel untuk mengedit. Scroll ke baris terbawah untuk menambah data baru.")
     template_data = pd.DataFrame({
         'Nama_Objek': ['Objek A', 'Objek B', 'Objek C', 'Objek D', 'Objek E'],
         'Fitur_1': [10.5, 12.0, 8.5, 15.0, 9.0],
@@ -69,17 +75,11 @@ if df is not None and not df.empty:
         st.sidebar.markdown("---")
         st.sidebar.header("⚙️ Pengaturan HAC")
         
-        # Memunculkan kembali menu panduan parameter algoritma di sidebar
         with st.sidebar.expander("ℹ️ Panduan Pengaturan (Klik di sini)"):
             st.markdown("""
-            **1. Fitur X & Y:** Pilih dua kolom angka yang akan dianalisis. Fitur X untuk sumbu datar, Fitur Y untuk sumbu tegak pada grafik.
-            
-            **2. Metode Linkage (Jarak):** - **Ward:** Paling direkomendasikan. Menghasilkan kelompok yang rapi dan seimbang.
-            - **Complete:** Mengukur jarak terjauh antar kelompok.
-            - **Average:** Mengukur jarak rata-rata.
-            - **Single:** Mengukur jarak terdekat, cocok untuk mencari data yang menyimpang (outlier).
-            
-            **3. Jumlah Klaster (K):** Mau dibagi jadi berapa kelompok? (Misal: Pilih 3 jika ingin membagi data menjadi kategori Tinggi, Sedang, Rendah).
+            **1. Fitur X & Y:** Pilih dua kolom angka.
+            **2. Metode Linkage:** Ward (Direkomendasikan), Complete, Average, Single.
+            **3. Jumlah Klaster (K):** Jumlah pembagian kelompok data.
             """)
         
         x_axis = st.sidebar.selectbox("Pilih Sumbu X", kolom_numerik, index=0)
@@ -93,14 +93,80 @@ if df is not None and not df.empty:
             
             # Memproses Model HAC
             hac = AgglomerativeClustering(n_clusters=k_value, metric='euclidean', linkage=linkage_method)
-            # Menjadikan tipe data string agar Plotly menganggapnya sebagai kategori (bukan gradasi angka)
             df['Cluster'] = hac.fit_predict(X).astype(str)
             
-            # --- TAMPILAN TABS (UI/UX MODERN) ---
             st.markdown("### 📈 Hasil Analisis Klasterisasi")
             tab1, tab2, tab3 = st.tabs(["🌳 Dendrogram", "🎯 Scatter Plot (Interaktif)", "📝 Tabel & Profiling"])
             
-            # TAB 1: DENDROGRAM
+            # TAB 1: DENDROGRAM (Disesuaikan aspek rasionya agar tidak gepeng di HP)
+            with tab1:
+                st.caption("Pohon hierarki menunjukkan proses penggabungan data.")
+                # Menggunakan ukuran figsize yang lebih persegi (8, 5) agar proporsional di layar HP
+                fig_dendro, ax_dendro = plt.subplots(figsize=(8, 5))
+                label_kolom = df.iloc[:, 0].astype(str).values if df.shape[1] > 0 else None
+                linkage_matrix = sch.linkage(X, method=linkage_method)
+                sch.dendrogram(linkage_matrix, labels=label_kolom, ax=ax_dendro, leaf_rotation=90)
+                plt.ylabel("Jarak Euclidean")
+                plt.tight_layout()  # Memastikan teks tidak terpotong
+                st.pyplot(fig_dendro)
+            
+            # TAB 2: SCATTER PLOT INTERAKTIF DENGAN PLOTLY
+            with tab2:
+                st.caption("Arahkan kursor atau ketuk titik untuk melihat detail objek.")
+                nama_objek = df.columns[0] 
+                fig_scatter = px.scatter(
+                    df, 
+                    x=x_axis, 
+                    y=y_axis, 
+                    color="Cluster",
+                    hover_name=nama_objek,
+                    title=f"Persebaran {k_value} Klaster",
+                    color_discrete_sequence=px.colors.qualitative.Set1
+                )
+                fig_scatter.update_traces(marker=dict(size=14, line=dict(width=1, color='DarkSlateGrey')))
+                
+                # Mengatur height agar otomatis persegi dan responsif di mobile
+                fig_scatter.update_layout(
+                    autosize=True,
+                    height=500,  # Membatasi tinggi agar tidak memanjang vertikal di HP
+                    margin=dict(l=40, r=40, b=40, t=40)
+                )
+                st.plotly_chart(fig_scatter, use_container_width=True)
+            
+            # TAB 3: TABEL, EVALUASI & DOWNLOAD
+            with tab3:
+                # Menggunakan kolom responsif (di desktop bersebelahan, di HP otomatis menumpuk vertikal)
+                col1, col2 = st.columns([1, 1])
+                
+                with col1:
+                    st.write("**Hasil Evaluasi Model**")
+                    if k_value > 1 and k_value < len(X):
+                        score = silhouette_score(X, df['Cluster'], metric='euclidean')
+                        st.success(f"Silhouette Score: **{score:.3f}**")
+                
+                with col2:
+                    st.write("**Unduh Laporan**")
+                    csv_export = df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📥 Download Hasil (CSV)",
+                        data=csv_export,
+                        file_name="hasil_klaster_hac.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+
+                st.write("---")
+                st.write("**Ringkasan Karakteristik (Rata-rata per Klaster)**")
+                df['Cluster_Int'] = df['Cluster'].astype(int)
+                profiling = df.groupby('Cluster_Int')[[x_axis, y_axis]].mean().reset_index()
+                profiling.rename(columns={'Cluster_Int': 'Cluster'}, inplace=True)
+                st.dataframe(profiling, use_container_width=True)
+                
+                st.write("**Tabel Data Lengkap**")
+                st.dataframe(df.drop(columns=['Cluster_Int']), use_container_width=True)
+
+    else:
+        st.error("Data yang diinputkan harus memiliki minimal 2 kolom yang berisi angka!")
             with tab1:
                 st.caption("Pohon hierarki ini menunjukkan proses penggabungan data berdasarkan kedekatan jarak.")
                 fig_dendro, ax_dendro = plt.subplots(figsize=(10, 4))
