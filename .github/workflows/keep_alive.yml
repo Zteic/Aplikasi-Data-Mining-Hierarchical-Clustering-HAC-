@@ -1,0 +1,12 @@
+name: Keep Streamlit Alive
+
+on:
+  schedule:
+    - cron: '0 */3 * * *' # Berjalan setiap 3 jam sekali
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit Streamlit App
+        run: curl -I https://streamlit.app
