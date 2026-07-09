@@ -2,8 +2,8 @@ name: Keep Streamlit Alive
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # Berjalan setiap 3 jam sekali
-workflow_dispatch:
+    - cron: '0 */3 * * *' # Tetap berjalan otomatis setiap 3 jam
+  workflow_dispatch:      # <-- TAMBAHKAN BARIS INI (untuk tombol jalankan manual)
 
 jobs:
   ping:
