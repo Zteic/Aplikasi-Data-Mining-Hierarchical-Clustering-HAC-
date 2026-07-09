@@ -2,12 +2,12 @@ name: Keep Streamlit Alive
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # Tetap berjalan otomatis setiap 3 jam
-  workflow_dispatch:      # <-- TAMBAHKAN BARIS INI (untuk tombol jalankan manual)
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
       - name: Hit Streamlit App
-        run: curl -I https://tugas-hac-rivaldi.streamlit.app/
+        run: curl -I -s https://tugas-hac-rivaldi.streamlit.app/
