@@ -9,4 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Hit Streamlit App
-        run: curl -I https://streamlit.app
+        run: curl -I https://tugas-hac-rivaldi.streamlit.app/
