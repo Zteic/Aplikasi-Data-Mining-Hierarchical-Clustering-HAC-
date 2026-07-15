@@ -2,12 +2,20 @@ name: Keep Streamlit Alive
 
 on:
   schedule:
-    - cron: '0 */3 * * *'
-  workflow_dispatch:
+    # Berjalan setiap 6 jam sekali
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Memungkinkan Anda menjalankan manual lewat tombol Run Workflow
 
 jobs:
-  ping:
+  auto_commit:
     runs-on: ubuntu-latest
     steps:
-      - name: Hit Streamlit App
-        run: curl -I -s https://tugas-hac-rivaldi.streamlit.app/
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Create empty commit
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@://github.com"
+        git commit --allow-empty -m "Keep-alive: Trigger Streamlit redeploy"
+        git push
