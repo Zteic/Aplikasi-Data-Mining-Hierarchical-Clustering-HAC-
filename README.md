@@ -1,25 +1,36 @@
-📊 Aplikasi Data Mining: Hierarchical Clustering (HAC)
+# 📊 Dashboard Data Mining: Hierarchical Agglomerative Clustering (HAC)
 
-Aplikasi interaktif berbasis antarmuka web (Streamlit) yang dikembangkan untuk memetakan dan mengelompokkan karakteristik data secara hierarki menggunakan algoritma Hierarchical Agglomerative Clustering (HAC). Proyek ini disusun untuk memenuhi tugas mata kuliah Penambangan Data.
+Aplikasi interaktif berbasis web (Streamlit) yang dikembangkan untuk memetakan dan mengelompokkan karakteristik data secara hierarki menggunakan algoritma *Hierarchical Agglomerative Clustering* (HAC). Proyek ini disusun untuk memenuhi Tugas Kelompok Mata Kuliah **Penambangan Data (Data Mining)**.
 
-✨ Fitur Utama:
+---
 
-Fleksibilitas Input Data: Mendukung 3 mode pengisian data, yaitu menggunakan data sampel (bawaan), input manual secara langsung pada antarmuka tabel interaktif, maupun unggah file .csv.
+## 🚀 Panduan Penggunaan untuk Penguji / Dosen
 
-Kustomisasi Algoritma: Pengguna dapat memilih parameter secara mandiri, seperti Fitur X/Y, penentuan Metode Linkage (Ward, Complete, Average, Single), dan jumlah klaster (K).
+Bapak/Ibu Dosen dapat menguji dan menjalankan aplikasi ini menggunakan salah satu dari **3 metode** berikut:
 
-Visualisasi Komprehensif: Menampilkan grafik pohon hierarki (Dendrogram) dan Scatter Plot secara instan.
+### 🌐 Metode 1: Akses Langsung via Web (Paling Praktis)
+Aplikasi sudah ter-deploy secara *live* dan dapat langsung diakses tanpa perlu melakukan instalasi di komputer:
+👉 **[Klik di Sini untuk Membuka Aplikasi Live Demo](https://tugas-hac-rivaldi.streamlit.app)**
 
-Evaluasi Kualitas Model: Dilengkapi dengan perhitungan Silhouette Score otomatis untuk mengukur tingkat akurasi pemisahan klaster.
+---
 
-Profiling Data & Ekspor: Menampilkan tabel ringkasan karakteristik tiap klaster berdasarkan nilai rata-rata, lengkap dengan fitur unduh (download) hasil akhir ke dalam format CSV.
+### ☁️ Metode 2: Jalankan via GitHub Codespaces (Cloud Environment)
+Proyek ini telah dilengkapi dengan konfigurasi Dev Container (`devcontainer.json`). Bapak/Ibu dapat menjalankan aplikasi secara instan di cloud GitHub tanpa menginstal Python di lokal:
+1. Klik tombol **Code** (warna hijau) di bagian atas repositori ini.
+2. Pilih tab **Codespaces** lalu klik **Create codespace on main**.
+3. Tunggu hingga sistem cloud selesai menyiapkan *environment* dan menginstal pustaka. Aplikasi Streamlit akan otomatis terbuka di jendela *Preview*.
 
-🛠️ Teknologi yang Digunakan:
+---
 
-Bahasa Pemrograman: Python
+### 💻 Metode 3: Jalankan Secara Lokal di Komputer
 
-Antarmuka Web: Streamlit
+Jika ingin menjalankan aplikasi secara lokal di laptop/komputer, ikuti langkah berikut:
 
-Pemrosesan & Visualisasi Data: Pandas, Matplotlib
+#### 1. Prasyarat
+Pastikan komputer sudah terinstal **Python 3.8+** dan **Git**.
 
-Machine Learning: Scikit-Learn, SciPy
+#### 2. Kloning Repositori & Masuk ke Folder
+Buka Terminal/Command Prompt (CMD), lalu jalankan:
+```bash
+git clone [https://github.com/Zteic/Aplikasi-Data-Mining-Hierarchical-Clustering-HAC-.git](https://github.com/Zteic/Aplikasi-Data-Mining-Hierarchical-Clustering-HAC-.git)
+cd Aplikasi-Data-Mining-Hierarchical-Clustering-HAC-
