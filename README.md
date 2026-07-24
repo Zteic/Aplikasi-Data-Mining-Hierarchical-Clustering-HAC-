@@ -32,5 +32,5 @@ Pastikan komputer sudah terinstal **Python 3.8+** dan **Git**.
 #### 2. Kloning Repositori & Masuk ke Folder
 Buka Terminal/Command Prompt (CMD), lalu jalankan:
 ```bash
-git clone [https://github.com/Zteic/Aplikasi-Data-Mining-Hierarchical-Clustering-HAC-.git](https://github.com/Zteic/Aplikasi-Data-Mining-Hierarchical-Clustering-HAC-.git)
+git clone https://github.com/Zteic/Aplikasi-Data-Mining-Hierarchical-Clustering-HAC-.git
 cd Aplikasi-Data-Mining-Hierarchical-Clustering-HAC-
