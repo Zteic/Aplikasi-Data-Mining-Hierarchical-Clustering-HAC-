@@ -16,7 +16,7 @@ Aplikasi sudah ter-deploy secara *live* dan dapat langsung diakses tanpa perlu m
 
 ### ☁️ Metode 2: Jalankan via GitHub Codespaces (Cloud Environment)
 Proyek ini telah dilengkapi dengan konfigurasi Dev Container (`devcontainer.json`). Bapak/Ibu dapat menjalankan aplikasi secara instan di cloud GitHub tanpa menginstal Python di lokal:
-1. Klik tombol **Code** (warna hijau) di bagian atas repositori ini.
+1. Klik tombol **Code** (warna hijau/biru) di bagian atas repositori ini.
 2. Pilih tab **Codespaces** lalu klik **Create codespace on main**.
 3. Tunggu hingga sistem cloud selesai menyiapkan *environment* dan menginstal pustaka. Aplikasi Streamlit akan otomatis terbuka di jendela *Preview*.
 
