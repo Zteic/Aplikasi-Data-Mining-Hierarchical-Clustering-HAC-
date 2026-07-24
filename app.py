@@ -67,6 +67,12 @@ elif sumber_data == "3. Upload CSV":
         st.warning("Silakan unggah file CSV untuk memulai.")
         st.stop()
 
+# Reset session state jika sumber data berubah
+if 'last_sumber_data' not in st.session_state or st.session_state['last_sumber_data'] != sumber_data:
+    st.session_state['last_sumber_data'] = sumber_data
+    if 'df_result' in st.session_state:
+        del st.session_state['df_result']
+
 # --- PROSES ALGORITMA ---
 if df is not None and not df.empty:
     kolom_numerik = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
@@ -88,13 +94,33 @@ if df is not None and not df.empty:
         linkage_method = st.sidebar.selectbox("Metode Linkage", ["ward", "complete", "average", "single"])
         k_value = st.sidebar.slider("Jumlah Klaster (K)", min_value=2, max_value=5, value=3)
 
-        if st.sidebar.button("🚀 Jalankan Klasterisasi"):
+        btn_jalankan = st.sidebar.button("🚀 Jalankan Klasterisasi")
+
+        # Jika tombol diklik, proses klasterisasi dan simpan hasilnya ke session_state
+        if btn_jalankan:
             X = df[[x_axis, y_axis]]
-            
-            # Memproses Model HAC
             hac = AgglomerativeClustering(n_clusters=k_value, metric='euclidean', linkage=linkage_method)
-            df['Cluster'] = hac.fit_predict(X).astype(str)
             
+            # Membuat copy dataframe agar data asli tidak tertimpa
+            df_result = df.copy()
+            df_result['Cluster'] = hac.fit_predict(X).astype(str)
+            
+            # Menyimpan ke session_state
+            st.session_state['df_result'] = df_result
+            st.session_state['x_axis'] = x_axis
+            st.session_state['y_axis'] = y_axis
+            st.session_state['linkage_method'] = linkage_method
+            st.session_state['k_value'] = k_value
+
+        # Menampilkan hasil jika analisis sudah pernah dijalankan
+        if 'df_result' in st.session_state:
+            df_res = st.session_state['df_result']
+            curr_x = st.session_state['x_axis']
+            curr_y = st.session_state['y_axis']
+            curr_linkage = st.session_state['linkage_method']
+            curr_k = st.session_state['k_value']
+            X_curr = df_res[[curr_x, curr_y]]
+
             st.markdown("### 📈 Hasil Analisis Klasterisasi")
             tab1, tab2, tab3 = st.tabs(["🌳 Dendrogram", "🎯 Scatter Plot (Interaktif)", "📝 Tabel & Profiling"])
             
@@ -102,8 +128,8 @@ if df is not None and not df.empty:
             with tab1:
                 st.caption("Pohon hierarki menunjukkan proses penggabungan data.")
                 fig_dendro, ax_dendro = plt.subplots(figsize=(8, 5))
-                label_kolom = df.iloc[:, 0].astype(str).values if df.shape[1] > 0 else None
-                linkage_matrix = sch.linkage(X, method=linkage_method)
+                label_kolom = df_res.iloc[:, 0].astype(str).values if df_res.shape[1] > 0 else None
+                linkage_matrix = sch.linkage(X_curr, method=curr_linkage)
                 sch.dendrogram(linkage_matrix, labels=label_kolom, ax=ax_dendro, leaf_rotation=90)
                 plt.ylabel("Jarak Euclidean")
                 plt.tight_layout()
@@ -112,14 +138,14 @@ if df is not None and not df.empty:
             # TAB 2: SCATTER PLOT INTERAKTIF
             with tab2:
                 st.caption("Arahkan kursor atau ketuk titik untuk melihat detail objek.")
-                nama_objek = df.columns[0] 
+                nama_objek = df_res.columns[0] 
                 fig_scatter = px.scatter(
-                    df, 
-                    x=x_axis, 
-                    y=y_axis, 
+                    df_res, 
+                    x=curr_x, 
+                    y=curr_y, 
                     color="Cluster",
                     hover_name=nama_objek,
-                    title=f"Persebaran {k_value} Klaster",
+                    title=f"Persebaran {curr_k} Klaster",
                     color_discrete_sequence=px.colors.qualitative.Set1
                 )
                 fig_scatter.update_traces(marker=dict(size=14, line=dict(width=1, color='DarkSlateGrey')))
@@ -136,30 +162,31 @@ if df is not None and not df.empty:
                 
                 with col1:
                     st.write("**Hasil Evaluasi Model**")
-                    if k_value > 1 and k_value < len(X):
-                        score = silhouette_score(X, df['Cluster'], metric='euclidean')
+                    if curr_k > 1 and curr_k < len(X_curr):
+                        score = silhouette_score(X_curr, df_res['Cluster'], metric='euclidean')
                         st.success(f"Silhouette Score: **{score:.3f}**")
                 
                 with col2:
                     st.write("**Unduh Laporan**")
-                    csv_export = df.to_csv(index=False).encode('utf-8')
+                    # Mengunduh data hasil klasterisasi (yang sudah berisi kolom Cluster)
+                    csv_export = df_res.to_csv(index=False).encode('utf-8')
                     st.download_button(
-                        label="📥 Download Hasil (CSV)",
+                        label="📥 Download Hasil Klasterisasi (CSV)",
                         data=csv_export,
-                        file_name="hasil_klaster_hac.csv",
+                        file_name="hasil_analisis_klaster_hac.csv",
                         mime="text/csv",
                         use_container_width=True
                     )
 
                 st.write("---")
                 st.write("**Ringkasan Karakteristik (Rata-rata per Klaster)**")
-                df['Cluster_Int'] = df['Cluster'].astype(int)
-                profiling = df.groupby('Cluster_Int')[[x_axis, y_axis]].mean().reset_index()
+                df_res['Cluster_Int'] = df_res['Cluster'].astype(int)
+                profiling = df_res.groupby('Cluster_Int')[[curr_x, curr_y]].mean().reset_index()
                 profiling.rename(columns={'Cluster_Int': 'Cluster'}, inplace=True)
                 st.dataframe(profiling, use_container_width=True)
                 
-                st.write("**Tabel Data Lengkap**")
-                st.dataframe(df.drop(columns=['Cluster_Int']), use_container_width=True)
+                st.write("**Tabel Data Lengkap Hasil Klasterisasi**")
+                st.dataframe(df_res.drop(columns=['Cluster_Int']), use_container_width=True)
 
     else:
         st.error("Data yang diinputkan harus memiliki minimal 2 kolom yang berisi angka!")
